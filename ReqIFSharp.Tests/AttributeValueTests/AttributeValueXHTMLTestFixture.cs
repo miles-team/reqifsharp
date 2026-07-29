@@ -24,6 +24,7 @@ namespace ReqIFSharp.Tests
     using System.IO;
     using System.Runtime.Serialization;
     using System.Threading;
+    using System.Threading.Tasks;
     using System.Xml;
 
     using Microsoft.Extensions.Logging;
@@ -196,6 +197,113 @@ namespace ReqIFSharp.Tests
                 Throws.TypeOf<SerializationException>()
                     .With.Message.StartsWith("The AttributeValueXHTML.IS-SIMPLIFIED"));
 
+        }
+
+        [Test]
+        public void Verify_that_external_objects_are_created_for_object_element_in_default_namespace()
+        {
+            const string xml = "<ATTRIBUTE-VALUE-XHTML><THE-VALUE><div xmlns=\"http://www.w3.org/1999/xhtml\"><object data=\"images/picture.png\" type=\"image/png\" width=\"100\" height=\"50\" /></div></THE-VALUE></ATTRIBUTE-VALUE-XHTML>";
+
+            var attributeValueXhtml = DeserializeAttributeValueXhtml(xml);
+
+            Assert.That(attributeValueXhtml.ExternalObjects, Has.Count.EqualTo(1));
+            Assert.That(attributeValueXhtml.ExternalObjects[0].Uri, Is.EqualTo("images/picture.png"));
+            Assert.That(attributeValueXhtml.ExternalObjects[0].MimeType, Is.EqualTo("image/png"));
+            Assert.That(attributeValueXhtml.ExternalObjects[0].Width, Is.EqualTo(100));
+            Assert.That(attributeValueXhtml.ExternalObjects[0].Height, Is.EqualTo(50));
+        }
+
+        [Test]
+        public void Verify_that_external_objects_are_created_for_prefixed_xhtml_object_element()
+        {
+            const string xml = "<ATTRIBUTE-VALUE-XHTML><THE-VALUE><xhtml:div xmlns:xhtml=\"http://www.w3.org/1999/xhtml\"><xhtml:object data=\"images/picture.png\" type=\"image/png\" /></xhtml:div></THE-VALUE></ATTRIBUTE-VALUE-XHTML>";
+
+            var attributeValueXhtml = DeserializeAttributeValueXhtml(xml);
+
+            Assert.That(attributeValueXhtml.ExternalObjects, Has.Count.EqualTo(1));
+            Assert.That(attributeValueXhtml.ExternalObjects[0].Uri, Is.EqualTo("images/picture.png"));
+        }
+
+        [Test]
+        public void Verify_that_external_objects_are_created_when_type_attribute_precedes_data_attribute()
+        {
+            const string xml = "<ATTRIBUTE-VALUE-XHTML><THE-VALUE><div xmlns=\"http://www.w3.org/1999/xhtml\"><object type=\"image/png\" data=\"images/picture.png\" /></div></THE-VALUE></ATTRIBUTE-VALUE-XHTML>";
+
+            var attributeValueXhtml = DeserializeAttributeValueXhtml(xml);
+
+            Assert.That(attributeValueXhtml.ExternalObjects, Has.Count.EqualTo(1));
+            Assert.That(attributeValueXhtml.ExternalObjects[0].Uri, Is.EqualTo("images/picture.png"));
+        }
+
+        [Test]
+        public void Verify_that_url_encoded_data_attribute_is_decoded()
+        {
+            const string xml = "<ATTRIBUTE-VALUE-XHTML><THE-VALUE><div xmlns=\"http://www.w3.org/1999/xhtml\"><object data=\"Boundary%20Scan/picture.png\" type=\"image/png\" /></div></THE-VALUE></ATTRIBUTE-VALUE-XHTML>";
+
+            var attributeValueXhtml = DeserializeAttributeValueXhtml(xml);
+
+            Assert.That(attributeValueXhtml.ExternalObjects, Has.Count.EqualTo(1));
+            Assert.That(attributeValueXhtml.ExternalObjects[0].Uri, Is.EqualTo("Boundary Scan/picture.png"));
+        }
+
+        [Test]
+        public void Verify_that_no_external_objects_are_created_for_value_without_object_element()
+        {
+            const string xml = "<ATTRIBUTE-VALUE-XHTML><THE-VALUE><div xmlns=\"http://www.w3.org/1999/xhtml\">plain text that mentions an object and some data</div></THE-VALUE></ATTRIBUTE-VALUE-XHTML>";
+
+            var attributeValueXhtml = DeserializeAttributeValueXhtml(xml);
+
+            Assert.That(attributeValueXhtml.ExternalObjects, Is.Empty);
+        }
+
+        [Test]
+        public void Verify_that_elements_whose_name_merely_starts_with_object_are_not_detected()
+        {
+            const string xml = "<ATTRIBUTE-VALUE-XHTML><THE-VALUE><div xmlns=\"http://www.w3.org/1999/xhtml\"><objectxxxx data=\"images/picture.png\" type=\"image/png\" /></div></THE-VALUE></ATTRIBUTE-VALUE-XHTML>";
+
+            var attributeValueXhtml = DeserializeAttributeValueXhtml(xml);
+
+            Assert.That(attributeValueXhtml.ExternalObjects, Is.Empty);
+        }
+
+        [Test]
+        public async Task Verify_that_external_objects_are_created_when_reading_asynchronously()
+        {
+            const string xml = "<ATTRIBUTE-VALUE-XHTML><THE-VALUE><div xmlns=\"http://www.w3.org/1999/xhtml\"><object data=\"images/picture.png\" type=\"image/png\" /></div></THE-VALUE></ATTRIBUTE-VALUE-XHTML>";
+
+            var attributeValueXhtml = new AttributeValueXHTML(new SpecObject(), null);
+
+            var settings = new XmlReaderSettings { Async = true };
+            using (var reader = XmlReader.Create(new StringReader(xml), settings))
+            {
+                await reader.MoveToContentAsync();
+                await attributeValueXhtml.ReadXmlAsync(reader, CancellationToken.None);
+            }
+
+            Assert.That(attributeValueXhtml.ExternalObjects, Has.Count.EqualTo(1));
+            Assert.That(attributeValueXhtml.ExternalObjects[0].Uri, Is.EqualTo("images/picture.png"));
+        }
+
+        /// <summary>
+        /// Deserializes an ATTRIBUTE-VALUE-XHTML snippet using the internal ReadXml method
+        /// </summary>
+        /// <param name="xml">
+        /// The xml snippet to deserialize
+        /// </param>
+        /// <returns>
+        /// The resulting <see cref="AttributeValueXHTML"/>
+        /// </returns>
+        private static AttributeValueXHTML DeserializeAttributeValueXhtml(string xml)
+        {
+            var attributeValueXhtml = new AttributeValueXHTML(new SpecObject(), null);
+
+            using (var reader = XmlReader.Create(new StringReader(xml)))
+            {
+                reader.MoveToContent();
+                attributeValueXhtml.ReadXml(reader);
+            }
+
+            return attributeValueXhtml;
         }
     }
 }
