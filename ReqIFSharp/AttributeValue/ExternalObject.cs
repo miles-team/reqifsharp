@@ -18,6 +18,10 @@
 // </copyright>
 // ------------------------------------------------------------------------------------------------
 
+// Modification notice (Apache License 2.0, section 4(b)):
+//   This file was modified in the miles-team/reqifsharp fork of ReqIFSharp.
+//   Change: QueryLocalData resolves zip entries that carry a leading folder, a different directory separator or URL encoding (ResolveZipEntry).
+
 namespace ReqIFSharp
 {
     using System;

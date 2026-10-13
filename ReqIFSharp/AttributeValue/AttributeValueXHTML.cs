@@ -18,6 +18,10 @@
 // </copyright>
 // ------------------------------------------------------------------------------------------------
 
+// Modification notice (Apache License 2.0, section 4(b)):
+//   This file was modified in the miles-team/reqifsharp fork of ReqIFSharp.
+//   Change: object elements are detected with or without a namespace prefix (previously only "xhtml:object").
+
 namespace ReqIFSharp
 {
     using System;

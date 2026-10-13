@@ -18,6 +18,10 @@
 // </copyright>
 // ------------------------------------------------------------------------------------------------
 
+// Modification notice (Apache License 2.0, section 4(b)):
+//   This file was modified in the miles-team/reqifsharp fork of ReqIFSharp.
+//   Change: tests for the detection of object elements were added.
+
 namespace ReqIFSharp.Tests
 {
     using System;
