@@ -18,6 +18,10 @@
 // </copyright>
 // ------------------------------------------------------------------------------------------------
 
+// Modification notice (Apache License 2.0, section 4(b)):
+//   This file was modified in the miles-team/reqifsharp fork of ReqIFSharp.
+//   Change: object elements are detected with or without a namespace prefix (previously only "xhtml:object").
+
 namespace ReqIFSharp
 {
     using System;
@@ -131,7 +135,8 @@ namespace ReqIFSharp
         }
 
         /// <summary>
-        /// Gets the <see cref="List{ExternalObject}"/> that may be present as xhtml:object in the XHTML content
+        /// Gets the <see cref="List{ExternalObject}"/> that may be present as object elements, with or without
+        /// a namespace prefix such as xhtml, in the XHTML content
         /// </summary>
         public List<ExternalObject> ExternalObjects { get; private set; }
 
@@ -249,7 +254,7 @@ namespace ReqIFSharp
                     {
                         this.TheValue = subtree.ReadInnerXml().Trim();
 
-                        if (this.TheValue.Contains("xhtml:object") && this.TheValue.Contains("data"))
+                        if (this.TheValue.Contains("object") && this.TheValue.Contains("data"))
                         {
                             var externalObjects = this.CreateExternalObjects(this.TheValue);
                             this.ExternalObjects.AddRange(externalObjects);
@@ -292,7 +297,7 @@ namespace ReqIFSharp
                     {
                         this.TheValue = (await subtree.ReadInnerXmlAsync()).Trim();
 
-                        if (this.TheValue.Contains("xhtml:object") && this.TheValue.Contains("data"))
+                        if (this.TheValue.Contains("object") && this.TheValue.Contains("data"))
                         {
                             var externalObjects =  await this.CreateExternalObjectsAsync(this.TheValue);
                             this.ExternalObjects.AddRange(externalObjects);

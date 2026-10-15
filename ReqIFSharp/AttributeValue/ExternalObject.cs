@@ -18,6 +18,10 @@
 // </copyright>
 // ------------------------------------------------------------------------------------------------
 
+// Modification notice (Apache License 2.0, section 4(b)):
+//   This file was modified in the miles-team/reqifsharp fork of ReqIFSharp.
+//   Change: QueryLocalData resolves zip entries that carry a leading folder, a different directory separator or URL encoding (ResolveZipEntry).
+
 namespace ReqIFSharp
 {
     using System;
@@ -150,7 +154,7 @@ namespace ReqIFSharp
 
             using (var archive = new ZipArchive(reqifz, ZipArchiveMode.Read))
             {
-                var zipArchiveEntry = archive.GetEntry(this.Uri);
+                var zipArchiveEntry = this.ResolveZipEntry(archive);
                 if (zipArchiveEntry != null)
                 {
                     var sourceStream = zipArchiveEntry.Open();
@@ -158,6 +162,77 @@ namespace ReqIFSharp
                     sourceStream.Dispose();
                 }
             }
+        }
+
+        /// <summary>
+        /// Resolves the <see cref="ZipArchiveEntry"/> that the <see cref="Uri"/> refers to.
+        /// </summary>
+        /// <param name="archive">
+        /// The <see cref="ZipArchive"/> in which the entry is searched
+        /// </param>
+        /// <returns>
+        /// The resolved <see cref="ZipArchiveEntry"/>, or null when no entry matches unambiguously
+        /// </returns>
+        /// <remarks>
+        /// According to the ReqIF specification the data attribute of an xhtml object element contains a URL
+        /// relative to the location of the exchange XML document. The exchange XML document is not required
+        /// to be located at the root of the zip archive, therefore entry names may carry a leading folder
+        /// prefix that is not part of the <see cref="Uri"/>. Resolution is performed in three steps:
+        /// exact match (backwards compatible fast path), normalized match (directory separator and
+        /// URL-encoding differences), and finally a suffix match on a '/' boundary that is only accepted
+        /// when it is unambiguous.
+        /// </remarks>
+        private ZipArchiveEntry ResolveZipEntry(ZipArchive archive)
+        {
+            var entry = archive.GetEntry(this.Uri);
+            if (entry != null)
+            {
+                return entry;
+            }
+
+            var normalizedUri = NormalizeEntryName(this.Uri);
+
+            foreach (var candidate in archive.Entries)
+            {
+                if (string.Equals(NormalizeEntryName(candidate.FullName), normalizedUri, StringComparison.OrdinalIgnoreCase))
+                {
+                    return candidate;
+                }
+            }
+
+            var suffix = "/" + normalizedUri;
+            ZipArchiveEntry suffixMatch = null;
+
+            foreach (var candidate in archive.Entries)
+            {
+                if (NormalizeEntryName(candidate.FullName).EndsWith(suffix, StringComparison.OrdinalIgnoreCase))
+                {
+                    if (suffixMatch != null)
+                    {
+                        // more than one entry matches; returning an arbitrary one could expose the wrong data
+                        return null;
+                    }
+
+                    suffixMatch = candidate;
+                }
+            }
+
+            return suffixMatch;
+        }
+
+        /// <summary>
+        /// Normalizes a zip entry name or uri for comparison: back slashes are replaced by forward
+        /// slashes and URL-encoded characters are decoded.
+        /// </summary>
+        /// <param name="name">
+        /// The zip entry name or uri to normalize
+        /// </param>
+        /// <returns>
+        /// The normalized name
+        /// </returns>
+        private static string NormalizeEntryName(string name)
+        {
+            return System.Uri.UnescapeDataString(name.Replace('\\', '/'));
         }
     }
 }
